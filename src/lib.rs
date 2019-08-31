@@ -1,3 +1,7 @@
+//! Generate FFI wrappers that catch unwindings from C into Rust with a specific
+//! payload and re-raises them in Rust as panics with the same payload
+
+/// Configuration builder
 pub struct Builder {
     cxx_headers: Vec<String>,
     input_rust_file: std::path::PathBuf,
@@ -5,13 +9,15 @@ pub struct Builder {
     skip_fn: Box<dyn Fn(&str) -> bool>,
 }
 
-/// Generate wrappers for extern decls in a given file
 pub struct Output {
     pub rust: String,
     pub cxx: String,
 }
 
 impl Builder {
+    /// Create a new configuration, where `name` is the name of the library, and
+    /// `input_rust_file` is a path to the file containing the extern
+    /// declarations.
     pub fn new(name: &str, input_rust_file: &std::path::Path) -> Self {
         Self {
             name: name.to_string(),
@@ -20,14 +26,20 @@ impl Builder {
             skip_fn: Box::new(|_| false),
         }
     }
+    /// C++ header files required by the library wrappers
     pub fn header(&mut self, header: &str) -> &mut Self {
         self.cxx_headers.push(header.to_string());
         self
     }
+    /// Extern declarations that should not get wrappers generated
     pub fn skip_fn<F: Fn(&str) -> bool + 'static>(&mut self, f: F) -> &mut Self {
         self.skip_fn = Box::new(f);
         self
     }
+    /// Generate a C++ and a Rust file containing the wrappers.
+    ///
+    /// The C++ file should be compiled, e.g., using the cc crate, and linked.
+    /// The Rust file can be `included!` into your library.
     pub fn generate(self) -> Output {
         let file_src = std::fs::read_to_string(&self.input_rust_file).unwrap_or_else(|e| {
             panic!(
