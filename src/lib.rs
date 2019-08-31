@@ -57,19 +57,30 @@ impl Builder {
             )
         });
 
-        let mut fns = Vec::new();
-        for item in &file.items {
-            if let syn::Item::ForeignMod(extern_block) = item {
-                for item in &extern_block.items {
-                    if let syn::ForeignItem::Fn(v) = item {
-                        if (self.skip_fn)(&v.sig.ident.to_string()) {
-                            continue;
+        fn append_items(items: &[syn::Item], fns: &mut Vec<syn::ForeignItemFn>) {
+            for item in items {
+                match item {
+                    syn::Item::ForeignMod(extern_block) => {
+                        for item in &extern_block.items {
+                            if let syn::ForeignItem::Fn(v) = item {
+                                fns.push(v.clone());
+                            }
                         }
-                        fns.push(v);
                     }
+                    syn::Item::Mod(m) if m.content.is_some() => {
+                        append_items(&m.content.as_ref().unwrap().1, fns)
+                    }
+                    _ => (),
                 }
             }
         }
+
+        let mut fns = Vec::new();
+        append_items(&file.items, &mut fns);
+        let fns: Vec<_> = fns
+            .iter()
+            .filter(|v| !(self.skip_fn)(&v.sig.ident.to_string()))
+            .collect();
 
         Output {
             rust: self.rust_wrappers(fns.as_slice()),

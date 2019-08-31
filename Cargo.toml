@@ -1,6 +1,6 @@
 [package]
 name = "ffi_wrapper_nounwind"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Gonzalo Brito Gadeschi <gonzalobg88@gmail.com>"]
 edition = "2018"
 description = "Automatically generate FFI wrappers that catch unwinding from FFI into Rust."
